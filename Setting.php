@@ -17,7 +17,7 @@ echo "
 │$red2  ┃╭━╮┃┃┃┃╱╱┃┃╱┃┃     $yellow2           Author  : AllJrLwr$green2                 │
 │$red2  ┃┃╱┃┃┃┃┃╱╱┃┣━┫┃╱╱╭╮╭╮╭┳━╮    $yellow2  Youtube : AllJrLwr$green2                 │
 │$putih2  ┃╰━╯┃┃┃┃╭╮┃┃╭┫┃╱╭┫╰╯╰╯┃╭╯  $yellow2    Server  : $server                     $green2 │
-│$putih2  ┃╭━╮┃╰┫╰┫╰╯┃┃┃╰━╯┣╮╭╮╭┫┃                             $green2             │
+│$putih2  ┃╭━╮┃╰┫╰┫╰╯┃┃┃╰━╯┣╮╭╮╭┫┃                           $green2             │
 │$putih2  ╰╯╱╰┻━┻━┻━━┻╯╰━━━╯╰╯╰╯╰╯     $yellow2  ＳＵＢＳＣＲＩＢＥ $green2                │
 │ 								     │
 └────────────────────────────────────────────────────────────────────┘\n";
