@@ -30,7 +30,9 @@ echo"│$putih3$red2 •> WARNING..!!$def                                       
 echo$green2."│$putih3$yellow2 •> Program Ilegal..!!$def                                             $green2 │\n";
 echo$green2."│$putih3$green2 •> Segala Resiko Di Tanggung Pengguna..!!!$def                        $green2 │\n";
 echo$green2."└────────────────────────────────────────────────────────────────────┘\n";
-
+echo "┌────────────────────────────────────────────────────────────────────┐
+│                  ＳＵＢＳＣＲＩＢＥ  ＡＬＬＪＲＬＷＲ              │
+└────────────────────────────────────────────────────────────────────┘\n";
 /*
 system("xdg-open https://youtube.com/channel/UCWoEqcTQbkpjp7wNI7q_TnQ");
 sleep(5);
