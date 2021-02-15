@@ -28,7 +28,7 @@ echo"│$putih3$red2 •> WARNING..!!$def\n";
 echo$green2."│$putih3$yellow2 •> Program Ilegal..!!$def\n";
 echo$green2."│$putih3$green2 •> Segala Resiko Di Tanggung Pengguna..!!!$def\n";
 echo$green2."└────────────────────────────────────────────────────────────────────┘";
-
+echo$green2."┌────────────────────────────────────────────────────────────────────┐│             $yellow2   ＳＵＢＳＣＲＩＢＥ  ＡｌｌＪｒＬｗｒ                │└────────────────────────────────────────────────────────────────────┘\n";
 $bot = true;
 
 
