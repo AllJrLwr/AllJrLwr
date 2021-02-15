@@ -29,7 +29,7 @@ echo$green2."│$putih3$yellow2 •> Program Ilegal..!!$def\n";
 echo$green2."│$putih3$green2 •> Segala Resiko Di Tanggung Pengguna..!!!$def\n";
 echo$green2."└────────────────────────────────────────────────────────────────────┘";
 
-$bot = false;
+$bot = true;
 
 
 
