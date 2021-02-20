@@ -1,6 +1,5 @@
 <?php
-System("pkg install bash");
-System("bash install.sh");
+
 
 /***
 Date		:	2021-02-20 Saturday 07:05:31
