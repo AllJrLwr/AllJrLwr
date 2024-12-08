@@ -16,11 +16,11 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
-      # Konfigurasi Git untuk commit
+      # Konfigurasi Git
       - name: Configure Git
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "AllJrLwr"
+          git config user.email "aldibayusp10@gmail.com"
 
       # Cek dan hapus file tokens.json
       - name: Check and Delete Token File
