@@ -1,1 +1,32 @@
+name: Delete Tokens After 30 Minutes
 
+on:
+  schedule:
+    - cron: "*/30 * * * *" # Jalankan setiap 30 menit
+
+jobs:
+  delete-file:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Hapus File tokens.json
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        REPO_OWNER: username # Ganti dengan nama pengguna GitHub Anda
+        REPO_NAME: repository-name # Ganti dengan nama repository Anda
+        FILE_NAME: tokens.json # Nama file yang akan dihapus
+      run: |
+        curl -s -H "Authorization: token $GITHUB_TOKEN" \
+        -X GET https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/contents/$FILE_NAME | jq -r .sha > file_sha.txt
+
+        FILE_SHA=$(cat file_sha.txt)
+
+        if [ "$FILE_SHA" != "null" ]; then
+          curl -s -H "Authorization: token $GITHUB_TOKEN" \
+          -X DELETE \
+          -d "{\"message\": \"Menghapus token setelah 30 menit\", \"sha\": \"$FILE_SHA\"}" \
+          https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/contents/$FILE_NAME
+          echo "File tokens.json berhasil dihapus."
+        else
+          echo "File tokens.json tidak ditemukan."
+        fi
