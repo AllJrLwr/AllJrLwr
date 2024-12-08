@@ -3,9 +3,9 @@ body {
         margin: 0;
           padding: 0;
             background-image: url('assets/Snaptik.app_731392073332582323811.jpg');
-  background-size: cover; /* Atur agar gambar memenuhi layar */
-  background-repeat: no-repeat; /* Hindari pengulangan gambar */
-  background-position: center; /* Pusatkan gambar */
+            background-size: contain; /* Atur agar gambar memenuhi layar */
+            background-repeat: no-repeat; /* Hindari pengulangan gambar */
+            background-position: center; /* Pusatkan gambar */
                   }
 
                   #player-container {
