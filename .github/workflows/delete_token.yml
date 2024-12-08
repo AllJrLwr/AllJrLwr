@@ -2,7 +2,7 @@ name: Delete Token File
 
 on:
   schedule:
-    - cron: '*/1 * * * *'  # Menjalankan setiap 30 menit
+    - cron: '*/30 * * * *'  # Menjalankan setiap 30 menit
 
 permissions:
   contents: write  # Memberikan izin untuk mengubah konten repository
