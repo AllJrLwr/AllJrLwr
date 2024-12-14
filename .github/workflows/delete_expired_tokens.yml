@@ -26,9 +26,12 @@ jobs:
         current_time=$(date +%s)
 
         # Menggunakan jq untuk memfilter token yang valid (dalam waktu 60 menit)
-        # Menyaring data yang timestamp-nya lebih dari 60 menit dari waktu saat ini
+        # Mengonversi timestamp ISO 8601 menjadi timestamp Unix dengan 'date'
         filtered_tokens=$(jq --arg current_time "$current_time" '
-          map(select(((($current_time | tonumber) - (.timestamp | fromdateiso8601 | tonumber)) / 60) <= 60))
+          map(select(
+            ((($current_time | tonumber) - (
+              .timestamp | sub("Z$"; "") | fromdateiso8601
+            )) / 60) <= 60))
         ' tokens.json)
 
         # Mengecek apakah ada token yang kadaluarsa dan melakukan update
