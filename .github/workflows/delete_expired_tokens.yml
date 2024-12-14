@@ -1,97 +1,63 @@
-name: Deleted Expired Tokens
+name: Delete Expired Tokens
 
 on:
   schedule:
-    - cron: "*/10 * * * *" # Jalankan setiap 10 menit
-  workflow_dispatch: # Memungkinkan menjalankan workflow secara manual
+    - cron: '*/5 * * * *' # Jalankan setiap 5 menit (dapat disesuaikan)
+  workflow_dispatch: # Memungkinkan menjalankan secara manual
 
 jobs:
-  cleanup_expired_tokens:
+  cleanup:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+    - name: Checkout repository
+      uses: actions/checkout@v3
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '16'
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: 16
 
-      - name: Install dependencies
-        run: npm install axios
+    - name: Read and filter tokens
+      id: cleanup_tokens
+      run: |
+        const fs = require('fs');
 
-      - name: Cleanup expired tokens
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO_OWNER: AllJrLwr # Ganti dengan nama pengguna GitHub Anda
-          REPO_NAME: AllJrLwr # Ganti dengan nama repository GitHub Anda
-        run: |
-          const axios = require('axios');
-          const fs = require('fs');
+        // Path file tokens.json
+        const filePath = './tokens.json';
 
-          // Konfigurasi GitHub API
-          const repoOwner = process.env.REPO_OWNER;
-          const repoName = process.env.REPO_NAME;
-          const fileName = 'tokens.json';
-          const githubToken = process.env.GITHUB_TOKEN;
-          const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${fileName}`;
+        // Cek apakah file tokens.json ada
+        if (!fs.existsSync(filePath)) {
+          console.log('File tokens.json tidak ditemukan. Tidak ada yang perlu dibersihkan.');
+          process.exit(0);
+        }
 
-          // Fungsi untuk mengambil file tokens.json dari GitHub
-          async function getFile() {
-            const response = await axios.get(apiUrl, {
-              headers: {
-                Authorization: `Bearer ${githubToken}`,
-                'Content-Type': 'application/json',
-                'User-Agent': 'GitHub Actions',
-              },
-            });
-            return response.data;
-          }
+        // Baca isi file tokens.json
+        const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
 
-          // Fungsi untuk memperbarui file tokens.json di GitHub
-          async function updateFile(content, sha) {
-            const encodedContent = Buffer.from(JSON.stringify(content, null, 2)).toString('base64');
-            await axios.put(apiUrl, {
-              message: 'Cleanup expired tokens',
-              content: encodedContent,
-              sha,
-            }, {
-              headers: {
-                Authorization: `Bearer ${githubToken}`,
-                'Content-Type': 'application/json',
-                'User-Agent': 'GitHub Actions',
-              },
-            });
-          }
+        // Filter token yang masih aktif (kurang dari 60 menit sejak timestamp)
+        const currentTime = new Date();
+        const validTokens = data.filter(token => {
+          const tokenTime = new Date(token.timestamp);
+          const timeDiff = (currentTime - tokenTime) / (1000 * 60); // Dalam menit
+          return timeDiff <= 60; // Hanya simpan token yang belum lebih dari 60 menit
+        });
 
-          // Proses cleanup token yang sudah expired
-          async function cleanupTokens() {
-            try {
-              const fileData = await getFile();
-              const tokens = JSON.parse(Buffer.from(fileData.content, 'base64').toString('utf-8'));
+        // Jika ada perubahan, tulis ulang file tokens.json
+        if (validTokens.length !== data.length) {
+          fs.writeFileSync(filePath, JSON.stringify(validTokens, null, 2));
+          console.log(`${data.length - validTokens.length} token yang expired telah dihapus.`);
+        } else {
+          console.log('Tidak ada token yang expired.');
+        }
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-              // Waktu sekarang dalam milidetik
-              const now = Date.now();
-
-              // Filter token yang belum expired (60 menit = 3600000 ms)
-              const validTokens = tokens.filter(token => {
-                const tokenTime = new Date(token.timestamp).getTime();
-                return now - tokenTime < 3600000; // Hanya menyimpan token yang belum 60 menit
-              });
-
-              if (validTokens.length !== tokens.length) {
-                console.log('Expired tokens ditemukan. Memperbarui tokens.json...');
-                await updateFile(validTokens, fileData.sha);
-                console.log('Expired tokens berhasil dihapus.');
-              } else {
-                console.log('Tidak ada token expired. Tidak ada perubahan.');
-              }
-            } catch (error) {
-              console.error('Terjadi kesalahan saat memproses tokens.json:', error.message);
-              process.exit(1);
-            }
-          }
-
-          // Jalankan cleanup
-          cleanupTokens();
+    - name: Commit and push changes
+      if: steps.cleanup_tokens.outputs.changed == 'true'
+      run: |
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git add tokens.json
+        git commit -m "Cleanup expired tokens from tokens.json"
+        git push
