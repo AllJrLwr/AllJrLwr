@@ -2,7 +2,7 @@ name: Deleted Expired Tokens
 
 on:
   schedule:
-    - cron: '0 * * * *'  # Setiap jam (Anda dapat mengubah jadwal sesuai kebutuhan)
+    - cron: '*/5 * * * *'  # Setiap jam (Anda dapat mengubah jadwal sesuai kebutuhan)
   workflow_dispatch:  # Memungkinkan untuk dijalankan secara manual jika diperlukan
 
 jobs:
