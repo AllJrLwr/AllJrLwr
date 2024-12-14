@@ -1,8 +1,8 @@
-name: Clean Expired Tokens
+name: Delete Expired Tokens
 
 on:
   schedule:
-    - cron: '0 * * * *' # Menjalankan setiap jam (bisa disesuaikan sesuai kebutuhan)
+    - cron: '*/5 * * * *' # Menjalankan setiap jam (bisa disesuaikan sesuai kebutuhan)
   workflow_dispatch: # Menjalankan secara manual
 
 jobs:
