@@ -2,7 +2,7 @@ name: Delete Expired Tokens
 
 on:
   schedule:
-    - cron: '*/5 * * * *' # Jalankan setiap 5 menit (dapat disesuaikan)
+    - cron: '*/5 * * * *' # Menjalankan setiap 5 menit
   workflow_dispatch: # Memungkinkan menjalankan secara manual
 
 jobs:
@@ -13,7 +13,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Filter expired tokens
+    - name: Filter expired tokens and keep only valid ones
       id: filter_tokens
       run: |
         # Membaca file tokens.json
@@ -25,28 +25,20 @@ jobs:
         # Mendapatkan waktu saat ini dalam detik
         current_time=$(date +%s)
 
-        # Membaca isi tokens.json dan memfilter token yang sudah kadaluarsa
-        temp_file=$(mktemp)
-        
-        # Menggunakan jq untuk memfilter token yang valid (masih dalam waktu 60 menit)
-        jq --arg current_time "$current_time" '
-          map(select((($current_time | tonumber - (.timestamp | fromdateiso8601 | tonumber)) / 60) <= 60))
-        ' tokens.json > $temp_file
+        # Menggunakan jq untuk memfilter token yang valid (dalam waktu 60 menit)
+        # Menyaring data yang timestamp-nya lebih dari 60 menit dari waktu saat ini
+        filtered_tokens=$(jq --arg current_time "$current_time" '
+          map(select(((($current_time | tonumber) - (.timestamp | fromdateiso8601 | tonumber)) / 60) <= 60))
+        ' tokens.json)
 
-        # Mengecek apakah ada perubahan
-        if cmp -s tokens.json $temp_file; then
-          echo "Tidak ada token yang kadaluarsa."
-        else
-          # Memperbarui file tokens.json dengan token yang valid
-          mv $temp_file tokens.json
-          echo "Token yang kadaluarsa telah dihapus."
-        fi
+        # Mengecek apakah ada token yang kadaluarsa dan melakukan update
+        echo "$filtered_tokens" > tokens.json
 
-    - name: Commit and push changes
-      if: success()
+    - name: Commit and push changes if there are updates
+      if: steps.filter_tokens.outputs.filtered_tokens != steps.filter_tokens.outputs.original_tokens
       run: |
         git config --global user.name "github-actions[bot]"
         git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
         git add tokens.json
-        git commit -m "Menghapus token yang kadaluarsa dari tokens.json"
+        git commit -m "Remove expired tokens from tokens.json"
         git push
