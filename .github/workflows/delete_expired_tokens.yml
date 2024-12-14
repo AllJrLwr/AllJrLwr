@@ -1,92 +1,97 @@
-name: Clean Expired Tokens
+name: Deleted Expired Tokens
 
 on:
   schedule:
-    - cron: '*/5 * * * *'  # Eksekusi setiap jam
-  workflow_dispatch:  # Bisa dijalankan manual jika diperlukan
+    - cron: "*/10 * * * *" # Jalankan setiap 10 menit
+  workflow_dispatch: # Memungkinkan menjalankan workflow secara manual
 
 jobs:
-  clean-expired-tokens:
+  cleanup_expired_tokens:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    - name: Set up PHP
-      uses: shivammathur/setup-php@v2
-      with:
-        php-version: '8.0'  # Gunakan versi PHP sesuai kebutuhan
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
 
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y jq
+      - name: Install dependencies
+        run: npm install axios
 
-    - name: Process tokens and manage expired ones
-      run: |
-        # Ambil file tokens.json dari repository
-        curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-          -H "Accept: application/vnd.github.v3+json" \
-          "https://api.github.com/repos/${{ github.repository }}/contents/tokens.json" \
-          -o tokens.json
+      - name: Cleanup expired tokens
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO_OWNER: AllJrLwr # Ganti dengan nama pengguna GitHub Anda
+          REPO_NAME: AllJrLwr # Ganti dengan nama repository GitHub Anda
+        run: |
+          const axios = require('axios');
+          const fs = require('fs');
 
-        # Pastikan file tokens.json ada
-        if [ -f "tokens.json" ]; then
-          # Decode isi file dari Base64
-          encoded_content=$(jq -r '.content' tokens.json)
-          decoded_content=$(echo "$encoded_content" | base64 -d)
+          // Konfigurasi GitHub API
+          const repoOwner = process.env.REPO_OWNER;
+          const repoName = process.env.REPO_NAME;
+          const fileName = 'tokens.json';
+          const githubToken = process.env.GITHUB_TOKEN;
+          const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${fileName}`;
 
-          # Parse file JSON
-          echo "$decoded_content" > tokens_decoded.json
+          // Fungsi untuk mengambil file tokens.json dari GitHub
+          async function getFile() {
+            const response = await axios.get(apiUrl, {
+              headers: {
+                Authorization: `Bearer ${githubToken}`,
+                'Content-Type': 'application/json',
+                'User-Agent': 'GitHub Actions',
+              },
+            });
+            return response.data;
+          }
 
-          # Array untuk menyimpan token yang masih valid
-          valid_tokens=()
+          // Fungsi untuk memperbarui file tokens.json di GitHub
+          async function updateFile(content, sha) {
+            const encodedContent = Buffer.from(JSON.stringify(content, null, 2)).toString('base64');
+            await axios.put(apiUrl, {
+              message: 'Cleanup expired tokens',
+              content: encodedContent,
+              sha,
+            }, {
+              headers: {
+                Authorization: `Bearer ${githubToken}`,
+                'Content-Type': 'application/json',
+                'User-Agent': 'GitHub Actions',
+              },
+            });
+          }
 
-          # Mendapatkan waktu saat ini (Unix timestamp)
-          current_time=$(date +%s)
+          // Proses cleanup token yang sudah expired
+          async function cleanupTokens() {
+            try {
+              const fileData = await getFile();
+              const tokens = JSON.parse(Buffer.from(fileData.content, 'base64').toString('utf-8'));
 
-          # Iterasi melalui setiap token untuk memeriksa usia
-          jq -c '.[]' tokens_decoded.json | while read token; do
-            token_id=$(echo $token | jq -r '.id')
-            token_timestamp=$(echo $token | jq -r '.timestamp' | xargs)
+              // Waktu sekarang dalam milidetik
+              const now = Date.now();
 
-            # Ubah timestamp token ke Unix timestamp
-            token_time_unix=$(date -d "$token_timestamp" +%s)
+              // Filter token yang belum expired (60 menit = 3600000 ms)
+              const validTokens = tokens.filter(token => {
+                const tokenTime = new Date(token.timestamp).getTime();
+                return now - tokenTime < 3600000; // Hanya menyimpan token yang belum 60 menit
+              });
 
-            # Hitung usia token
-            token_age=$((current_time - token_time_unix))
+              if (validTokens.length !== tokens.length) {
+                console.log('Expired tokens ditemukan. Memperbarui tokens.json...');
+                await updateFile(validTokens, fileData.sha);
+                console.log('Expired tokens berhasil dihapus.');
+              } else {
+                console.log('Tidak ada token expired. Tidak ada perubahan.');
+              }
+            } catch (error) {
+              console.error('Terjadi kesalahan saat memproses tokens.json:', error.message);
+              process.exit(1);
+            }
+          }
 
-            # Jika token belum 60 menit, tambahkan ke array valid_tokens
-            if [ $token_age -le 300 ]; then
-              valid_tokens+=("$token")
-            else
-              echo "Token $token_id expired, removing..."
-            fi
-          done
-
-          # Jika ada token yang valid, simpan kembali ke file
-          if [ ${#valid_tokens[@]} -gt 0 ]; then
-            echo "${valid_tokens[@]}" | jq -s '.' > updated_tokens.json
-
-            # Encode kembali ke Base64 untuk diupload ke GitHub
-            new_content=$(cat updated_tokens.json | base64 | tr -d '\n')
-            sha=$(jq -r '.sha' tokens.json)
-
-            # Upload kembali file tokens.json yang diperbarui
-            curl -X PUT -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-              -H "Content-Type: application/json" \
-              -d "{
-                    \"message\": \"Update tokens.json, remove expired tokens\",
-                    \"content\": \"$new_content\",
-                    \"sha\": \"$sha\"
-                  }" \
-              "https://api.github.com/repos/${{ github.repository }}/contents/tokens.json"
-
-            echo "Tokens updated successfully."
-          else
-            echo "No valid tokens left to update."
-          fi
-        else
-          echo "tokens.json file not found."
-        fi
+          // Jalankan cleanup
+          cleanupTokens();
