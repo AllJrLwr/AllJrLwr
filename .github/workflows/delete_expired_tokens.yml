@@ -2,7 +2,7 @@ name: Delete Expired Tokens
 
 on:
   schedule:
-    - cron: '0 * * * *' # Jalankan setiap jam
+    - cron: '*/1 * * * *' # Jalankan setiap jam
 
 jobs:
   clean_expired_tokens:
