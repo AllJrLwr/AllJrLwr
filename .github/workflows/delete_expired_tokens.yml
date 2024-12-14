@@ -1,31 +1,69 @@
-name: Delete Expired Tokens
+name: Deleted Expired Tokens
 
 on:
   schedule:
-    - cron: '*/1 * * * *' # Jalankan setiap 10 menit
+    - cron: '0 * * * *'  # Setiap jam (Anda dapat mengubah jadwal sesuai kebutuhan)
+  workflow_dispatch:  # Memungkinkan untuk dijalankan secara manual jika diperlukan
 
 jobs:
-  delete-expired-tokens:
+  clean-expired-tokens:
     runs-on: ubuntu-latest
+    
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
+    - name: Checkout repository
+      uses: actions/checkout@v3
 
-      - name: Install PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.0'
+    - name: Set up PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.0'  # Gunakan versi PHP sesuai kebutuhan
 
-      - name: Delete Expired Tokens
-        run: |
-          php -r "
-          \$file = 'tokens.json';
-          if (file_exists(\$file)) {
-              \$tokens = json_decode(file_get_contents(\$file), true);
-              \$current_time = time();
-              \$filtered_tokens = array_filter(\$tokens, function (\$token) use (\$current_time) {
-                  return (strtotime(\$token['timestamp']) + 3600) > \$current_time;
-              });
-              file_put_contents(\$file, json_encode(array_values(\$filtered_tokens), JSON_PRETTY_PRINT));
-          }
-          "
+    - name: Install dependencies (if necessary)
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y jq
+
+    - name: Process tokens and remove expired ones
+      run: |
+        # Ambil file tokens.json dari repository
+        curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          -H "Accept: application/vnd.github.v3+json" \
+          "https://api.github.com/repos/${{ github.repository }}/contents/tokens.json" \
+          -o tokens.json
+
+        # Cek apakah file tokens.json ada
+        if [ -f "tokens.json" ]; then
+          # Parse dan filter token yang lebih dari 60 menit
+          current_time=$(date +%s)
+          new_tokens=()
+
+          # Proses setiap token dalam file JSON
+          jq -c '.[]' tokens.json | while read token; do
+            token_timestamp=$(echo $token | jq -r '.timestamp' | xargs)
+            token_id=$(echo $token | jq -r '.id' | xargs)
+            
+            # Hitung selisih waktu antara timestamp token dan waktu saat ini
+            token_age=$((current_time - token_timestamp))
+
+            # Jika token lebih dari 60 menit, jangan masukkan ke array baru
+            if [ $token_age -le 3600 ]; then
+              new_tokens+=("$token")
+            else
+              echo "Token $token_id expired, removing..."
+            fi
+          done
+
+          # Jika ada token yang valid, simpan kembali ke tokens.json
+          if [ ${#new_tokens[@]} -gt 0 ]; then
+            echo "${new_tokens[@]}" | jq -s '.' > updated_tokens.json
+            curl -X PUT -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Content-Type: application/json" \
+              -d @updated_tokens.json \
+              "https://api.github.com/repos/${{ github.repository }}/contents/tokens.json"
+            echo "Tokens updated successfully."
+          else
+            echo "No valid tokens to update."
+          fi
+        else
+          echo "tokens.json file not found."
+        fi
