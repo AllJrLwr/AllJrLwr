@@ -27,7 +27,11 @@ jobs:
 
         # Membaca isi tokens.json dan memfilter token yang sudah kadaluarsa
         temp_file=$(mktemp)
-        jq '[.[] | select((($current_time - (.timestamp | fromdateiso8601)) / 60) <= 60)]' tokens.json > $temp_file
+        
+        # Menggunakan jq untuk memfilter token yang valid (masih dalam waktu 60 menit)
+        jq --arg current_time "$current_time" '
+          map(select((($current_time | tonumber - (.timestamp | fromdateiso8601 | tonumber)) / 60) <= 60))
+        ' tokens.json > $temp_file
 
         # Mengecek apakah ada perubahan
         if cmp -s tokens.json $temp_file; then
