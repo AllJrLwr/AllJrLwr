@@ -22,18 +22,16 @@ jobs:
       id: cleanup_tokens
       run: |
         const fs = require('fs');
-
-        // Path file tokens.json
-        const filePath = './tokens.json';
+        const path = './tokens.json';
 
         // Cek apakah file tokens.json ada
-        if (!fs.existsSync(filePath)) {
-          console.log('File tokens.json tidak ditemukan. Tidak ada yang perlu dibersihkan.');
+        if (!fs.existsSync(path)) {
+          console.log('File tokens.json tidak ditemukan.');
           process.exit(0);
         }
 
         // Baca isi file tokens.json
-        const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+        const data = JSON.parse(fs.readFileSync(path, 'utf8'));
 
         // Filter token yang masih aktif (kurang dari 60 menit sejak timestamp)
         const currentTime = new Date();
@@ -43,10 +41,12 @@ jobs:
           return timeDiff <= 60; // Hanya simpan token yang belum lebih dari 60 menit
         });
 
-        // Jika ada perubahan, tulis ulang file tokens.json
+        // Simpan perubahan jika ada token yang expired
         if (validTokens.length !== data.length) {
-          fs.writeFileSync(filePath, JSON.stringify(validTokens, null, 2));
+          fs.writeFileSync(path, JSON.stringify(validTokens, null, 2));
           console.log(`${data.length - validTokens.length} token yang expired telah dihapus.`);
+          // Tandai perubahan
+          process.exit(0);
         } else {
           console.log('Tidak ada token yang expired.');
         }
@@ -54,7 +54,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Commit and push changes
-      if: steps.cleanup_tokens.outputs.changed == 'true'
+      if: success()
       run: |
         git config --global user.name "github-actions[bot]"
         git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
