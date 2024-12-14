@@ -1,14 +1,14 @@
-name: Deleted Expired Tokens
+name: Clean Expired Tokens
 
 on:
   schedule:
-    - cron: '*/5 * * * *'  # Setiap jam (Anda dapat mengubah jadwal sesuai kebutuhan)
-  workflow_dispatch:  # Memungkinkan untuk dijalankan secara manual jika diperlukan
+    - cron: '*/5 * * * *'  # Eksekusi setiap jam
+  workflow_dispatch:  # Bisa dijalankan manual jika diperlukan
 
 jobs:
   clean-expired-tokens:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
@@ -18,12 +18,12 @@ jobs:
       with:
         php-version: '8.0'  # Gunakan versi PHP sesuai kebutuhan
 
-    - name: Install dependencies (if necessary)
+    - name: Install dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y jq
 
-    - name: Process tokens and remove expired ones
+    - name: Process tokens and manage expired ones
       run: |
         # Ambil file tokens.json dari repository
         curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
@@ -31,38 +31,61 @@ jobs:
           "https://api.github.com/repos/${{ github.repository }}/contents/tokens.json" \
           -o tokens.json
 
-        # Cek apakah file tokens.json ada
+        # Pastikan file tokens.json ada
         if [ -f "tokens.json" ]; then
-          # Parse dan filter token yang lebih dari 60 menit
+          # Decode isi file dari Base64
+          encoded_content=$(jq -r '.content' tokens.json)
+          decoded_content=$(echo "$encoded_content" | base64 -d)
+
+          # Parse file JSON
+          echo "$decoded_content" > tokens_decoded.json
+
+          # Array untuk menyimpan token yang masih valid
+          valid_tokens=()
+
+          # Mendapatkan waktu saat ini (Unix timestamp)
           current_time=$(date +%s)
-          new_tokens=()
 
-          # Proses setiap token dalam file JSON
-          jq -c '.[]' tokens.json | while read token; do
+          # Iterasi melalui setiap token untuk memeriksa usia
+          jq -c '.[]' tokens_decoded.json | while read token; do
+            token_id=$(echo $token | jq -r '.id')
             token_timestamp=$(echo $token | jq -r '.timestamp' | xargs)
-            token_id=$(echo $token | jq -r '.id' | xargs)
-            
-            # Hitung selisih waktu antara timestamp token dan waktu saat ini
-            token_age=$((current_time - token_timestamp))
 
-            # Jika token lebih dari 60 menit, jangan masukkan ke array baru
-            if [ $token_age -le 3600 ]; then
-              new_tokens+=("$token")
+            # Ubah timestamp token ke Unix timestamp
+            token_time_unix=$(date -d "$token_timestamp" +%s)
+
+            # Hitung usia token
+            token_age=$((current_time - token_time_unix))
+
+            # Jika token belum 60 menit, tambahkan ke array valid_tokens
+            if [ $token_age -le 300 ]; then
+              valid_tokens+=("$token")
             else
               echo "Token $token_id expired, removing..."
             fi
           done
 
-          # Jika ada token yang valid, simpan kembali ke tokens.json
-          if [ ${#new_tokens[@]} -gt 0 ]; then
-            echo "${new_tokens[@]}" | jq -s '.' > updated_tokens.json
+          # Jika ada token yang valid, simpan kembali ke file
+          if [ ${#valid_tokens[@]} -gt 0 ]; then
+            echo "${valid_tokens[@]}" | jq -s '.' > updated_tokens.json
+
+            # Encode kembali ke Base64 untuk diupload ke GitHub
+            new_content=$(cat updated_tokens.json | base64 | tr -d '\n')
+            sha=$(jq -r '.sha' tokens.json)
+
+            # Upload kembali file tokens.json yang diperbarui
             curl -X PUT -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
               -H "Content-Type: application/json" \
-              -d @updated_tokens.json \
+              -d "{
+                    \"message\": \"Update tokens.json, remove expired tokens\",
+                    \"content\": \"$new_content\",
+                    \"sha\": \"$sha\"
+                  }" \
               "https://api.github.com/repos/${{ github.repository }}/contents/tokens.json"
+
             echo "Tokens updated successfully."
           else
-            echo "No valid tokens to update."
+            echo "No valid tokens left to update."
           fi
         else
           echo "tokens.json file not found."
