@@ -13,45 +13,30 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: 16
-
-    - name: Read and filter tokens
-      id: cleanup_tokens
+    - name: Filter expired tokens
+      id: filter_tokens
       run: |
-        const fs = require('fs');
-        const path = './tokens.json';
+        # Membaca file tokens.json
+        if [ ! -f tokens.json ]; then
+          echo "File tokens.json tidak ditemukan."
+          exit 0
+        fi
 
-        // Cek apakah file tokens.json ada
-        if (!fs.existsSync(path)) {
-          console.log('File tokens.json tidak ditemukan.');
-          process.exit(0);
-        }
+        # Mendapatkan waktu saat ini dalam detik
+        current_time=$(date +%s)
 
-        // Baca isi file tokens.json
-        const data = JSON.parse(fs.readFileSync(path, 'utf8'));
+        # Membaca isi tokens.json dan memfilter token yang sudah kadaluarsa
+        temp_file=$(mktemp)
+        jq '[.[] | select((($current_time - (.timestamp | fromdateiso8601)) / 60) <= 60)]' tokens.json > $temp_file
 
-        // Filter token yang masih aktif (kurang dari 60 menit sejak timestamp)
-        const currentTime = new Date();
-        const validTokens = data.filter(token => {
-          const tokenTime = new Date(token.timestamp);
-          const timeDiff = (currentTime - tokenTime) / (1000 * 60); // Dalam menit
-          return timeDiff <= 60; // Hanya simpan token yang belum lebih dari 60 menit
-        });
-
-        // Simpan perubahan jika ada token yang expired
-        if (validTokens.length !== data.length) {
-          fs.writeFileSync(path, JSON.stringify(validTokens, null, 2));
-          console.log(`${data.length - validTokens.length} token yang expired telah dihapus.`);
-          // Tandai perubahan
-          process.exit(0);
-        } else {
-          console.log('Tidak ada token yang expired.');
-        }
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # Mengecek apakah ada perubahan
+        if cmp -s tokens.json $temp_file; then
+          echo "Tidak ada token yang kadaluarsa."
+        else
+          # Memperbarui file tokens.json dengan token yang valid
+          mv $temp_file tokens.json
+          echo "Token yang kadaluarsa telah dihapus."
+        fi
 
     - name: Commit and push changes
       if: success()
@@ -59,5 +44,5 @@ jobs:
         git config --global user.name "github-actions[bot]"
         git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
         git add tokens.json
-        git commit -m "Cleanup expired tokens from tokens.json"
+        git commit -m "Menghapus token yang kadaluarsa dari tokens.json"
         git push
