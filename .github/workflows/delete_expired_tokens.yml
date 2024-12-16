@@ -1,0 +1,61 @@
+name: Clean Expired Tokens
+
+on:
+  schedule:
+    - cron: "*/5 * * * *" # Jalankan setiap 5 menit
+  workflow_dispatch: # Bisa dijalankan secara manual
+
+jobs:
+  cleanup_tokens:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      
+    steps:
+      # Checkout repository
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Setup timezone
+      - name: Set timezone
+        run: echo "TZ=Asia/Jakarta" >> $GITHUB_ENV
+
+      # Install jq untuk memproses JSON
+      - name: Install jq
+        run: sudo apt-get install jq
+
+      # Clean up expired tokens
+      - name: Remove expired tokens
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_EMAIL: ${{ secrets.GH_EMAIL }}
+        run: |
+          # Cek apakah file tokens.json ada
+          if [ -f tokens.json ]; then
+            echo "File tokens.json ditemukan. Melanjutkan proses..."
+          else
+            echo "File tokens.json tidak ditemukan. Membuat file kosong..."
+            echo "[]" > tokens.json
+          fi
+
+          # Hitung waktu saat ini (dalam detik sejak epoch)
+          current_time=$(date +%s)
+
+          # Filter data: hanya sisakan token dengan usia kurang dari 60 menit
+          jq --argjson current_time "$current_time" '
+            [.[] | select(($current_time - (.timestamp | gsub("\\.[0-9]+Z$"; "Z") | fromdateiso8601)) < 3600)]
+          ' tokens.json > temp.json
+
+          # Periksa apakah ada perubahan pada file
+          if cmp -s tokens.json temp.json; then
+            echo "Tidak ada perubahan. Tidak ada token yang kedaluwarsa."
+          else
+            # Update tokens.json
+            mv temp.json tokens.json
+            git config --global user.name "AllJrLwr"
+            git config --global user.email "$GH_EMAIL"
+            git add tokens.json
+            git commit -m "Cleanup expired tokens"
+            git push https://AllJrLwr:${GH_TOKEN}@github.com/AllJrLwr/AllJrLwr.git HEAD:main
+            echo "Tokens yang kedaluwarsa berhasil dihapus."
+          fi
