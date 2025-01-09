@@ -42,16 +42,17 @@ jobs:
           # Hitung waktu saat ini (dalam detik sejak epoch)
           current_time=$(date +%s)
 
-          # Fungsi untuk verifikasi signature
+          # Fungsi untuk verifikasi signature (termasuk UUID)
           verify_signature() {
             local token="$1"
             local timestamp="$2"
-            local signature="$3"
-            local secret="$4"
+            local uuid="$3"
+            local signature="$4"
+            local secret="$5"
 
-            # Hitung signature ulang dengan HMAC
+            # Hitung signature ulang dengan HMAC yang melibatkan UUID
             local calculated_signature
-            calculated_signature=$(echo -n "${token}${timestamp}" | openssl dgst -sha256 -hmac "$secret" | awk '{print $2}')
+            calculated_signature=$(echo -n "${token}${timestamp}${uuid}" | openssl dgst -sha256 -hmac "$secret" | awk '{print $2}')
 
             # Cocokkan signature
             if [ "$calculated_signature" = "$signature" ]; then
@@ -61,13 +62,17 @@ jobs:
             fi
           }
 
-          # Filter data: hanya sisakan token yang valid dan usia kurang dari 60 menit
+          # Filter data: hanya sisakan token yang valid dan usia kurang dari 60 menit serta signature yang valid
           jq --argjson current_time "$current_time" --arg secret "$GITHUB_SECRET_KEY" '
             [
               .[] 
               | select(
                   (($current_time - (.timestamp | gsub("\\.[0-9]+Z$"; "Z") | fromdateiso8601)) < 3600) 
-                  and ((.githubSignature | tostring) == (env.secret | @base64d | @base64))
+                  and (.uuid != null) # Pastikan UUID ada
+                  and (
+                    .githubSignature == (env.secret | @base64d | @base64) 
+                    and verify_signature(.token, .timestamp, .uuid, .githubSignature, env.secret) == "valid"
+                  )
                 )
             ]
           ' tokens.json > temp.json
