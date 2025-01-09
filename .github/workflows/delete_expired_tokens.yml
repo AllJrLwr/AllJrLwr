@@ -29,7 +29,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           GH_EMAIL: ${{ secrets.GH_EMAIL }}
-          GITHUB_SECRET_KEY: ${{ secrets.GITHUB_SECRET_KEY }} # Tambahkan secret key untuk signature verifikasi
+          GITHUB_SECRET_KEY: ${{ secrets.GITHUB_SECRET_KEY }}
         run: |
           # Cek apakah file tokens.json ada dan valid
           if [ -f tokens.json ]; then
@@ -37,10 +37,12 @@ jobs:
             # Menampilkan isi file untuk debugging
             cat tokens.json
 
-            # Periksa apakah file tokens.json valid
+            # Periksa apakah file JSON valid
             if ! jq empty tokens.json > /dev/null 2>&1; then
-              echo "tokens.json tidak valid, mengosongkan isi dan memulai ulang..."
-              echo "[]" > tokens.json
+              echo "File tokens.json tidak valid. Memperbaiki format JSON..."
+              # Tambahkan tanda kurung penutup jika hilang
+              sed -i -e 's/,$//' tokens.json   # Hapus koma terakhir (jika ada)
+              echo "]" >> tokens.json          # Tambahkan tanda kurung penutup
             fi
           else
             echo "File tokens.json tidak ditemukan. Membuat file kosong..."
@@ -49,68 +51,31 @@ jobs:
 
           # Periksa apakah file tokens.json kosong
           if [ ! -s tokens.json ]; then
-            echo "tokens.json kosong, membuat file kosong yang valid..."
+            echo "File tokens.json kosong, menulis ulang dengan format valid..."
             echo "[]" > tokens.json
           fi
 
           # Hitung waktu saat ini (dalam detik sejak epoch)
           current_time=$(date +%s)
 
-          # Fungsi untuk verifikasi signature (termasuk UUID)
-          verify_signature() {
-            local token="$1"
-            local timestamp="$2"
-            local uuid="$3"
-            local signature="$4"
-            local secret="$5"
-
-            # Hitung signature ulang dengan HMAC yang melibatkan UUID
-            local calculated_signature
-            calculated_signature=$(echo -n "${token}${timestamp}${uuid}" | openssl dgst -sha256 -hmac "$secret" | awk '{print $2}')
-
-            # Cocokkan signature
-            if [ "$calculated_signature" = "$signature" ]; then
-              echo "valid"
-            else
-              echo "invalid"
-            fi
-          }
-
-          # Filter data: hanya sisakan token yang valid dan usia kurang dari 3600 detik (60 menit)
-          jq --argjson current_time "$current_time" --arg secret "$GITHUB_SECRET_KEY" '
-            .[] | select(
-                (($current_time - (.timestamp | gsub("\\.[0-9]+Z$"; "Z") | fromdateiso8601)) < 3600)  # Token yang lebih muda dari 60 menit
-                and (.uuid != null)  # Pastikan UUID ada
-            )
+          # Filter token berdasarkan timestamp (valid <= 3600 detik)
+          jq --argjson current_time "$current_time" '
+            [
+              .[] | select(
+                ($current_time - (.timestamp | gsub("\\.[0-9]+Z$"; "Z") | fromdateiso8601)) < 3600
+              )
+            ]
           ' tokens.json > temp_filtered.json
 
-          # Verifikasi signature secara terpisah menggunakan bash
-          while IFS= read -r token_data; do
-            # Ambil data dari JSON yang sudah difilter
-            token=$(echo "$token_data" | jq -r '.token')
-            timestamp=$(echo "$token_data" | jq -r '.timestamp')
-            uuid=$(echo "$token_data" | jq -r '.uuid')
-            github_signature=$(echo "$token_data" | jq -r '.githubSignature')
-
-            # Verifikasi signature
-            signature_valid=$(verify_signature "$token" "$timestamp" "$uuid" "$github_signature" "$GITHUB_SECRET_KEY")
-
-            # Jika signature valid, simpan token
-            if [ "$signature_valid" = "valid" ]; then
-              echo "$token_data" >> temp_valid_tokens.json
-            fi
-          done < temp_filtered.json
-
           # Periksa apakah ada perubahan pada file
-          if cmp -s tokens.json temp_valid_tokens.json; then
-            echo "Tidak ada perubahan. Tidak ada token yang kedaluwarsa atau tidak valid."
+          if cmp -s tokens.json temp_filtered.json; then
+            echo "Tidak ada perubahan. Tidak ada token yang kedaluwarsa."
           else
-            # Update tokens.json dengan token yang valid
-            mv temp_valid_tokens.json tokens.json
+            mv temp_filtered.json tokens.json
             git config --global user.name "AllJrLwr"
             git config --global user.email "$GH_EMAIL"
             git add tokens.json
             git commit -m "Cleanup expired tokens"
             git push https://AllJrLwr:${GH_TOKEN}@github.com/AllJrLwr/AllJrLwr.git HEAD:main
-            echo "Tokens yang kedaluwarsa atau tidak valid berhasil dihapus."
+            echo "Tokens yang kedaluwarsa berhasil dihapus."
           fi
