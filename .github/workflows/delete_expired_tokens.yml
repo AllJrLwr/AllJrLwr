@@ -34,6 +34,9 @@ jobs:
           # Cek apakah file tokens.json ada dan valid
           if [ -f tokens.json ]; then
             echo "File tokens.json ditemukan. Memeriksa apakah JSON valid..."
+            # Menampilkan isi file untuk debugging
+            cat tokens.json
+
             # Periksa apakah file tokens.json valid
             if ! jq empty tokens.json > /dev/null 2>&1; then
               echo "tokens.json tidak valid, mengosongkan isi dan memulai ulang..."
