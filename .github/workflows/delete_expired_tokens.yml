@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      
+
     steps:
       # Checkout repository
       - name: Checkout repository
@@ -29,6 +29,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           GH_EMAIL: ${{ secrets.GH_EMAIL }}
+          GITHUB_SECRET_KEY: ${{ secrets.GITHUB_SECRET_KEY }} # Tambahkan secret key untuk signature verifikasi
         run: |
           # Cek apakah file tokens.json ada
           if [ -f tokens.json ]; then
@@ -41,14 +42,39 @@ jobs:
           # Hitung waktu saat ini (dalam detik sejak epoch)
           current_time=$(date +%s)
 
-          # Filter data: hanya sisakan token dengan usia kurang dari 60 menit
-          jq --argjson current_time "$current_time" '
-            [.[] | select(($current_time - (.timestamp | gsub("\\.[0-9]+Z$"; "Z") | fromdateiso8601)) < 3600)]
+          # Fungsi untuk verifikasi signature
+          verify_signature() {
+            local token="$1"
+            local timestamp="$2"
+            local signature="$3"
+            local secret="$4"
+
+            # Hitung signature ulang dengan HMAC
+            local calculated_signature
+            calculated_signature=$(echo -n "${token}${timestamp}" | openssl dgst -sha256 -hmac "$secret" | awk '{print $2}')
+
+            # Cocokkan signature
+            if [ "$calculated_signature" = "$signature" ]; then
+              echo "valid"
+            else
+              echo "invalid"
+            fi
+          }
+
+          # Filter data: hanya sisakan token yang valid dan usia kurang dari 60 menit
+          jq --argjson current_time "$current_time" --arg secret "$GITHUB_SECRET_KEY" '
+            [
+              .[] 
+              | select(
+                  (($current_time - (.timestamp | gsub("\\.[0-9]+Z$"; "Z") | fromdateiso8601)) < 3600) 
+                  and ((.githubSignature | tostring) == (env.secret | @base64d | @base64))
+                )
+            ]
           ' tokens.json > temp.json
 
           # Periksa apakah ada perubahan pada file
           if cmp -s tokens.json temp.json; then
-            echo "Tidak ada perubahan. Tidak ada token yang kedaluwarsa."
+            echo "Tidak ada perubahan. Tidak ada token yang kedaluwarsa atau tidak valid."
           else
             # Update tokens.json
             mv temp.json tokens.json
@@ -57,5 +83,5 @@ jobs:
             git add tokens.json
             git commit -m "Cleanup expired tokens"
             git push https://AllJrLwr:${GH_TOKEN}@github.com/AllJrLwr/AllJrLwr.git HEAD:main
-            echo "Tokens yang kedaluwarsa berhasil dihapus."
+            echo "Tokens yang kedaluwarsa atau tidak valid berhasil dihapus."
           fi
