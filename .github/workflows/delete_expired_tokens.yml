@@ -44,6 +44,12 @@ jobs:
             echo "[]" > tokens.json
           fi
 
+          # Periksa apakah file tokens.json kosong
+          if [ ! -s tokens.json ]; then
+            echo "tokens.json kosong, membuat file kosong yang valid..."
+            echo "[]" > tokens.json
+          fi
+
           # Hitung waktu saat ini (dalam detik sejak epoch)
           current_time=$(date +%s)
 
