@@ -62,15 +62,15 @@ jobs:
             fi
           }
 
-          # Filter data: hanya sisakan token yang valid dan usia kurang dari 60 menit serta signature yang valid
+          # Filter data: hanya sisakan token yang valid dan usia kurang dari 3600 detik (60 menit) serta signature yang valid
           jq --argjson current_time "$current_time" --arg secret "$GITHUB_SECRET_KEY" '
             [
               .[] 
               | select(
-                  (($current_time - (.timestamp | gsub("\\.[0-9]+Z$"; "Z") | fromdateiso8601)) < 3600) 
-                  and (.uuid != null) # Pastikan UUID ada
+                  (($current_time - (.timestamp | gsub("\\.[0-9]+Z$"; "Z") | fromdateiso8601)) < 3600)  # Token yang lebih muda dari 60 menit
+                  and (.uuid != null)  # Pastikan UUID ada
                   and (
-                    .githubSignature == (env.secret | @base64d | @base64) 
+                    .githubSignature == (env.secret | @base64d | @base64)  # Verifikasi signature
                     and verify_signature(.token, .timestamp, .uuid, .githubSignature, env.secret) == "valid"
                   )
                 )
