@@ -31,9 +31,14 @@ jobs:
           GH_EMAIL: ${{ secrets.GH_EMAIL }}
           GITHUB_SECRET_KEY: ${{ secrets.GITHUB_SECRET_KEY }} # Tambahkan secret key untuk signature verifikasi
         run: |
-          # Cek apakah file tokens.json ada
+          # Cek apakah file tokens.json ada dan valid
           if [ -f tokens.json ]; then
-            echo "File tokens.json ditemukan. Melanjutkan proses..."
+            echo "File tokens.json ditemukan. Memeriksa apakah JSON valid..."
+            # Periksa apakah file tokens.json valid
+            if ! jq empty tokens.json > /dev/null 2>&1; then
+              echo "tokens.json tidak valid, mengosongkan isi dan memulai ulang..."
+              echo "[]" > tokens.json
+            fi
           else
             echo "File tokens.json tidak ditemukan. Membuat file kosong..."
             echo "[]" > tokens.json
