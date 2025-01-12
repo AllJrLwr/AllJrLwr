@@ -58,11 +58,22 @@ jobs:
           # Hitung waktu saat ini (dalam detik sejak epoch)
           current_time=$(date +%s)
 
-          # Filter token berdasarkan timestamp (valid <= 3600 detik)
+          # Filter token berdasarkan timestamp:
+          # - Validasi 1 jam untuk token yang dihasilkan dari website
+          # - Validasi 3 jam untuk token yang dihasilkan dari bot Telegram
           jq --argjson current_time "$current_time" '
             [
               .[] | select(
-                ($current_time - (.timestamp | gsub("\\.[0-9]+Z$"; "Z") | fromdateiso8601)) < 3600
+                # Filter untuk token dari website (1 jam kedaluwarsa)
+                (
+                  .source == "website" and 
+                  ($current_time - (.timestamp | gsub("\\.[0-9]+Z$"; "Z") | fromdateiso8601)) < 3600
+                ) or
+                # Filter untuk token dari Telegram (3 jam kedaluwarsa)
+                (
+                  .source == "telegram" and
+                  ($current_time - (.timestamp | gsub("\\.[0-9]+Z$"; "Z") | fromdateiso8601)) < 10800
+                )
               )
             ]
           ' tokens.json > temp_filtered.json
