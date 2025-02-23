@@ -67,7 +67,7 @@ jobs:
                 # Filter untuk token dari website (1 jam kedaluwarsa)
                 (
                   .source == "website" and 
-                  ($current_time - (.timestamp | gsub("\\.[0-9]+Z$"; "Z") | fromdateiso8601)) < 3600
+                  ($current_time - (.timestamp | gsub("\\.[0-9]+Z$"; "Z") | fromdateiso8601)) < 7200
                 ) or
                 # Filter untuk token dari Telegram (3 jam kedaluwarsa)
                 (
