@@ -29,58 +29,46 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           GH_EMAIL: ${{ secrets.GH_EMAIL }}
-          GITHUB_SECRET_KEY: ${{ secrets.GITHUB_SECRET_KEY }}
         run: |
+          set -e # Hentikan eksekusi jika ada error
+
           # Cek apakah file tokens.json ada dan valid
           if [ -f tokens.json ]; then
             echo "File tokens.json ditemukan. Memeriksa apakah JSON valid..."
-            # Menampilkan isi file untuk debugging
             cat tokens.json
 
-            # Periksa apakah file JSON valid
+            # Periksa apakah JSON valid
             if ! jq empty tokens.json > /dev/null 2>&1; then
               echo "File tokens.json tidak valid. Memperbaiki format JSON..."
-              # Tambahkan tanda kurung penutup jika hilang
-              sed -i -e 's/,$//' tokens.json   # Hapus koma terakhir (jika ada)
-              echo "]" >> tokens.json          # Tambahkan tanda kurung penutup
+              echo "[]" > tokens.json
             fi
           else
             echo "File tokens.json tidak ditemukan. Membuat file kosong..."
             echo "[]" > tokens.json
           fi
 
-          # Periksa apakah file tokens.json kosong
-          if [ ! -s tokens.json ]; then
-            echo "File tokens.json kosong, menulis ulang dengan format valid..."
-            echo "[]" > tokens.json
-          fi
-
-          # Hitung waktu saat ini (dalam detik sejak epoch)
+          # Hitung waktu saat ini dalam detik sejak epoch
           current_time=$(date +%s)
 
-          # Filter token berdasarkan timestamp:
-          # - Validasi 2 jam untuk token yang dihasilkan dari website
-          # - Validasi 5 jam untuk token yang dihasilkan dari bot Telegram
+          # Hapus token yang sudah kedaluwarsa
           jq --argjson current_time "$current_time" '
             [
               .[] | select(
-                # Filter untuk token dari website (2 jam kedaluwarsa)
                 (
                   .source == "website" and 
                   ($current_time - (.timestamp | gsub("\\.[0-9]+Z$"; "Z") | fromdateiso8601)) < 7200
                 ) or
-                # Filter untuk token dari Telegram (5 jam kedaluwarsa)
                 (
-                  .source == "telegram" and
+                  .source == "telegram" and 
                   ($current_time - (.timestamp | gsub("\\.[0-9]+Z$"; "Z") | fromdateiso8601)) < 18000
                 )
               )
             ]
           ' tokens.json > temp_filtered.json
 
-          # Periksa apakah ada perubahan pada file
+          # Cek apakah ada perubahan
           if cmp -s tokens.json temp_filtered.json; then
-            echo "Tidak ada perubahan. Tidak ada token yang kedaluwarsa."
+            echo "Tidak ada token yang kedaluwarsa."
           else
             mv temp_filtered.json tokens.json
             git config --global user.name "AllJrLwr"
