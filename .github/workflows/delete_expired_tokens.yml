@@ -56,11 +56,11 @@ jobs:
               .[] | select(
                 (
                   .source == "website" and 
-                  ($current_time - (.timestamp | gsub("\\.[0-9]+Z$"; "Z") | fromdateiso8601)) < 7300
+                  ($current_time - (.timestamp | gsub("\\.[0-9]+Z$"; "Z") | fromdateiso8601)) < 7200
                 ) or
                 (
                   .source == "telegram" and 
-                  ($current_time - (.timestamp | gsub("\\.[0-9]+Z$"; "Z") | fromdateiso8601)) < 18000
+                  ($current_time - (.timestamp | gsub("\\.[0-9]+Z$"; "Z") | fromdateiso8601)) < 3600
                 )
               )
             ]
