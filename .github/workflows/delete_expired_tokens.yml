@@ -55,7 +55,7 @@ jobs:
             [
               .[] | select(
                 (
-                  .source == "website" and 
+                  (.source == "website" or .source == "vip") and 
                   ($current_time - (.timestamp | gsub("\\.[0-9]+Z$"; "Z") | fromdateiso8601)) < 7200
                 ) or
                 (
