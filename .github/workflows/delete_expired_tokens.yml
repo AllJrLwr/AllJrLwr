@@ -60,7 +60,7 @@ jobs:
                 ) or
                 (
                   .source == "telegram" and 
-                  ($current_time - (.timestamp | gsub("\\.[0-9]+Z$"; "Z") | fromdateiso8601)) < 3600
+                  ($current_time - (.timestamp | gsub("\\.[0-9]+Z$"; "Z") | fromdateiso8601)) < 7200
                 )
               )
             ]
