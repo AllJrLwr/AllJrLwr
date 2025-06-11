@@ -3,7 +3,7 @@ name: Clean Expired Tokens
 on:
   schedule:
     - cron: "*/5 * * * *" # Jalankan setiap 5 menit
-  workflow_dispatch: # Bisa dijalankan secara manual
+  workflow_dispatch: # Bisa dijalankan manual dari GitHub
 
 jobs:
   cleanup_tokens:
@@ -16,7 +16,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Setup timezone
+      # Set timezone (optional)
       - name: Set timezone
         run: echo "TZ=Asia/Jakarta" >> $GITHUB_ENV
 
@@ -24,22 +24,21 @@ jobs:
       - name: Install jq
         run: sudo apt-get install jq
 
-      # Clean up expired tokens
+      # Clean expired tokens
       - name: Remove expired tokens
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           GH_EMAIL: ${{ secrets.GH_EMAIL }}
         run: |
-          set -e # Hentikan eksekusi jika ada error
+          set -e # Hentikan jika ada error
 
-          # Cek apakah file tokens.json ada dan valid
+          # Cek apakah file tokens.json valid
           if [ -f tokens.json ]; then
             echo "File tokens.json ditemukan. Memeriksa apakah JSON valid..."
             cat tokens.json
 
-            # Periksa apakah JSON valid
             if ! jq empty tokens.json > /dev/null 2>&1; then
-              echo "File tokens.json tidak valid. Memperbaiki format JSON..."
+              echo "File tokens.json tidak valid. Membuat ulang dengan array kosong..."
               echo "[]" > tokens.json
             fi
           else
@@ -47,19 +46,19 @@ jobs:
             echo "[]" > tokens.json
           fi
 
-          # Hitung waktu saat ini dalam detik sejak epoch
+          # Hitung waktu sekarang (epoch)
           current_time=$(date +%s)
 
-          # Hapus token yang sudah kedaluwarsa
+          # Filter token yang belum expired
           jq --argjson current_time "$current_time" '
             [
               .[] | select(
                 (
-                  (.source == "website" or .source == "vip") and 
-                  ($current_time - (.timestamp | gsub("\\.[0-9]+Z$"; "Z") | fromdateiso8601)) < 7200
+                  (.expires_at != null) and 
+                  ($current_time < (.expires_at | gsub("\\.[0-9]+Z$"; "Z") | fromdateiso8601))
                 ) or
                 (
-                  .source == "telegram" and 
+                  (.expires_at == null) and
                   ($current_time - (.timestamp | gsub("\\.[0-9]+Z$"; "Z") | fromdateiso8601)) < 7200
                 )
               )
