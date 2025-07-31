@@ -59,7 +59,7 @@ jobs:
                 ) or
                 (
                   (.expires_at == null) and
-                  ($current_time - (.timestamp | gsub("\\.[0-9]+Z$"; "Z") | fromdateiso8601)) < 7200
+                  ($current_time - (.timestamp | gsub("\\.[0-9]+Z$"; "Z") | fromdateiso8601)) < 10800
                 )
               )
             ]
