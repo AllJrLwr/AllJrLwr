@@ -1,0 +1,51 @@
+name: 🔥 Keep Replit Alive
+on:
+  schedule:
+    - cron: '*/7 * * * *'  # Health check every 7 minutes
+    - cron: '*/5 * * * *'  # Warmup every 5 minutes  
+  workflow_dispatch:       # Manual trigger
+
+jobs:
+  health-check:
+    name: 🩺 Health Check
+    if: github.event.schedule == '*/7 * * * *' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Replit Health
+        run: |
+          echo "🩺 Checking Replit health..."
+          curl -s -X GET "${{ secrets.REPLIT_URL }}/health" \
+            -H "X-API-Key: ${{ secrets.REPLIT_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -w "HTTP Status: %{http_code}\n"
+          echo "✅ Health check completed at $(date)"
+
+  warm-up:
+    name: 🔥 Warm Up
+    if: github.event.schedule == '*/5 * * * *' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Warm Up Replit
+        run: |
+          echo "🔥 Warming up Replit..."
+          curl -s -X POST "${{ secrets.REPLIT_URL }}/warmup" \
+            -H "X-API-Key: ${{ secrets.REPLIT_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -w "HTTP Status: %{http_code}\n"
+          echo "✅ Warmup completed at $(date)"
+
+  status:
+    name: 📊 Status Report
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Final Status
+        run: |
+          echo "📊 Cronjob Execution Report"
+          echo "============================"
+          echo "Workflow: ${{ github.workflow }}"
+          echo "Trigger: ${{ github.event_name }}"
+          echo "Schedule: ${{ github.event.schedule }}"
+          echo "Time: $(date)"
+          echo "Repository: ${{ github.repository }}"
+          echo "============================"
