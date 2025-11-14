@@ -7,74 +7,43 @@ on:
   workflow_dispatch:       # Manual trigger
 
 jobs:
-
   health-check:
     name: 🩺 Health Check
-    # Jalan hanya jika trigger = cron */7 atau manual
-    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '*/7 * * * *'
+    if: github.event.schedule == '*/7 * * * *' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-
     steps:
       - name: Check Replit Health
         run: |
           echo "🩺 Checking Replit health..."
-
-          response=$(curl -sS --fail-with-body \
-            -o /tmp/response_body \
-            -w "%{http_code}" \
+          response=$(curl -s -o /tmp/response_body -w "%{http_code}" \
             -X GET "${{ secrets.REPLIT_URL }}/health" \
-            --max-time 10)
-
-          status=$?
-
+            -H "Content-Type: application/json")
           echo "HTTP Status: $response"
           cat /tmp/response_body
-
-          if [ "$status" -ne 0 ]; then
-            echo "⚠️ CURL error: $status"
-            exit 0
-          fi
-
           if [ "$response" -ge 300 ]; then
-            echo "⚠️ Warning: HTTP $response"
+            echo "⚠️ Warning: HTTP status $response"
           else
             echo "✅ Health check completed at $(date)"
           fi
 
-
   warm-up:
     name: 🔥 Warm Up
-    # Jalan hanya jika trigger = cron */5 atau manual
-    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '*/5 * * * *'
+    if: github.event.schedule == '*/5 * * * *' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-
     steps:
       - name: Warm Up Replit
         run: |
           echo "🔥 Warming up Replit..."
-
-          response=$(curl -sS --fail-with-body \
-            -o /tmp/response_body \
-            -w "%{http_code}" \
+          response=$(curl -s -o /tmp/response_body -w "%{http_code}" \
             -X GET "${{ secrets.REPLIT_URL }}/warmup" \
-            --max-time 10)
-
-          status=$?
-
+            -H "Content-Type: application/json")
           echo "HTTP Status: $response"
           cat /tmp/response_body
-
-          if [ "$status" -ne 0 ]; then
-            echo "⚠️ CURL error: $status"
-            exit 0
-          fi
-
           if [ "$response" -ge 300 ]; then
-            echo "⚠️ Warning: HTTP $response"
+            echo "⚠️ Warning: HTTP status $response"
           else
             echo "✅ Warmup completed at $(date)"
           fi
-
 
   status:
     name: 📊 Status Report
@@ -85,9 +54,9 @@ jobs:
         run: |
           echo "📊 Cronjob Execution Report"
           echo "============================"
-          echo "Workflow   : ${{ github.workflow }}"
-          echo "Trigger    : ${{ github.event_name }}"
-          echo "Schedule   : ${{ github.event.schedule }}"
-          echo "Time       : $(date)"
-          echo "Repository : ${{ github.repository }}"
+          echo "Workflow: ${{ github.workflow }}"
+          echo "Trigger: ${{ github.event_name }}"
+          echo "Schedule: ${{ github.event.schedule }}"
+          echo "Time: $(date)"
+          echo "Repository: ${{ github.repository }}"
           echo "============================"
