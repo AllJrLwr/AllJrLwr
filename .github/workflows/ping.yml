@@ -16,7 +16,7 @@ jobs:
         run: |
           echo "🩺 Checking Replit health..."
           response=$(curl -s -o /tmp/response_body -w "%{http_code}" \
-            -X GET "${{ secrets.REPLIT_URL }}/health" \
+            -X GET "https://e78f85a4-051f-44f4-b723-3a80f218d23b-00-1ov8kjr2hy4fq.sisko.replit.dev:3000/health" \
             -H "Content-Type: application/json")
           echo "HTTP Status: $response"
           cat /tmp/response_body
@@ -35,7 +35,7 @@ jobs:
         run: |
           echo "🔥 Warming up Replit..."
           response=$(curl -s -o /tmp/response_body -w "%{http_code}" \
-            -X GET "${{ secrets.REPLIT_URL }}/warmup" \
+            -X GET "https://e78f85a4-051f-44f4-b723-3a80f218d23b-00-1ov8kjr2hy4fq.sisko.replit.dev:3000/warmup" \
             -H "Content-Type: application/json")
           echo "HTTP Status: $response"
           cat /tmp/response_body
