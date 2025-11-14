@@ -17,7 +17,6 @@ jobs:
           echo "🩺 Checking Replit health..."
           response=$(curl -s -o /tmp/response_body -w "%{http_code}" \
             -X GET "${{ secrets.REPLIT_URL }}/health" \
-            -H "X-API-Key: ${{ secrets.REPLIT_API_KEY }}" \
             -H "Content-Type: application/json")
           echo "HTTP Status: $response"
           cat /tmp/response_body
@@ -37,7 +36,6 @@ jobs:
           echo "🔥 Warming up Replit..."
           response=$(curl -s -o /tmp/response_body -w "%{http_code}" \
             -X POST "${{ secrets.REPLIT_URL }}/warmup" \
-            -H "X-API-Key: ${{ secrets.REPLIT_API_KEY }}" \
             -H "Content-Type: application/json")
           echo "HTTP Status: $response"
           cat /tmp/response_body
