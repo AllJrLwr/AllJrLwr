@@ -1,0 +1,21 @@
+{
+  "metadata": {
+    "experiment_name": "Initial-Schema-Test",
+    "timestamp": "2026-07-06T17:28:38.954533",
+    "framework": "TensorFlow/Colab"
+  },
+  "metrics": {
+    "accuracy": 0.92,
+    "val_loss": 0.15
+  },
+  "assertions": [
+    "accuracy di sini merujuk pada Top-1 Accuracy pada dataset Validation"
+  ],
+  "confidence": {
+    "level": "high",
+    "basis": [
+      "Single run successful",
+      "Metrics within expected range"
+    ]
+  }
+}
