@@ -1,0 +1,14 @@
+{
+  "metadata": {
+    "experiment_name": "Security-Audit",
+    "timestamp": "2026-07-06T18:16:19.695771"
+  },
+  "metrics": {
+    "integrity_check": "passed",
+    "auth_method": "HMAC-SHA256"
+  },
+  "assertions": [
+    "Data ini dijamin oleh Gemini via Personal Secret."
+  ],
+  "signature": "eebd15be35b1c9fc853e1db013b0c7daf86d6fc17b59b68f0a749e618585ce89"
+}
